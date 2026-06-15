@@ -1,0 +1,37 @@
+name: TQQQ daily signal
+
+on:
+  schedule:
+    # 13:00 UTC = 9:00 AM ET (EDT), weekdays — before the open so you have the
+    # target in hand. GitHub cron is UTC and can run a few minutes late.
+    - cron: '0 13 * * 1-5'
+  workflow_dispatch: {}        # allow manual "Run workflow" from the Actions tab
+
+permissions:
+  issues: write                # post the signal as an issue (uses built-in token)
+
+jobs:
+  signal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Compute signal
+        run: python cloud_signal.py | tee signal.md
+      - name: Post signal as an issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('signal.md', 'utf8');
+            const date = new Date().toISOString().slice(0, 10);
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `TQQQ signal ${date}`,
+              body,
+            });
