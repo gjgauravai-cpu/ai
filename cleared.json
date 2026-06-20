@@ -1,0 +1,38 @@
+{
+  "cleared_strategies": [
+    "vol_target_har",
+    "vol_target_armod",
+    "vol_target_ivhar",
+    "vol_target_har_live"
+  ],
+  "detail": {
+    "vol_target_har": {
+      "net_sharpe": 0.507,
+      "pvalue": 0.023,
+      "net_cagr": 0.1531,
+      "maxdd": -0.646,
+      "corr_to_live": null
+    },
+    "vol_target_armod": {
+      "net_sharpe": 0.487,
+      "pvalue": 0.037,
+      "net_cagr": 0.1434,
+      "maxdd": -0.586,
+      "corr_to_live": null
+    },
+    "vol_target_ivhar": {
+      "net_sharpe": 0.501,
+      "pvalue": 0.027,
+      "net_cagr": 0.1512,
+      "maxdd": -0.646,
+      "corr_to_live": null
+    },
+    "vol_target_har_live": {
+      "net_sharpe": 0.502,
+      "pvalue": 0.03,
+      "net_cagr": 0.1529,
+      "maxdd": -0.6,
+      "corr_to_live": null
+    }
+  }
+}

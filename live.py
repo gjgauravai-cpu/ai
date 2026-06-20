@@ -16,6 +16,7 @@ import argparse
 import json
 
 import data
+import gate
 import models
 from config import UNIVERSE, EngineConfig, DEFAULT
 from strategies import build_weights
@@ -25,6 +26,7 @@ STRATEGY = "vol_target_har_live"          # the validated, low-turnover deployab
 
 def latest_target(ticker: str, cfg: EngineConfig, refresh: bool = False) -> dict:
     """Compute the current target weight from causal history (no account state)."""
+    gate.assert_cleared(STRATEGY)              # HARD GATE: no PASS on file => no execution
     if ticker not in UNIVERSE:
         raise SystemExit(f"Unknown ticker '{ticker}'. Known: {list(UNIVERSE)}")
     spec = UNIVERSE[ticker]

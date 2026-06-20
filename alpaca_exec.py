@@ -20,6 +20,7 @@ import uuid
 
 import requests
 
+import gate
 import live
 from config import EngineConfig
 
@@ -44,6 +45,7 @@ def position_value() -> float:
 def run() -> None:
     if not (KEY and SEC):
         raise SystemExit("Set ALPACA_API_KEY / ALPACA_SECRET_KEY as GitHub secrets.")
+    gate.assert_cleared(live.STRATEGY)         # HARD GATE: refuse to trade an uncleared strategy
     mode = "PAPER" if PAPER else "LIVE"
     clock = _get("/v2/clock").json()
     if not clock.get("is_open"):
