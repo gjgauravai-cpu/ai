@@ -1,0 +1,27 @@
+name: Alpaca daily rebalance (TQQQ)
+
+# Runs with your laptop OFF. 14:45 UTC = ~10:45 ET (EDT) / 9:45 ET (EST) — safely
+# after the open in both. The script's market-clock check skips holidays/closes.
+on:
+  schedule:
+    - cron: '45 14 * * 1-5'
+  workflow_dispatch: {}        # manual "Run workflow" button
+
+permissions:
+  contents: read
+
+jobs:
+  rebalance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - name: Rebalance via Alpaca (paper by default)
+        env:
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          ALPACA_PAPER: 'true'          # set to 'false' only when you go live
+        run: python alpaca_exec.py
