@@ -1,0 +1,67 @@
+name: Daily TQQQ run (signal + Alpaca execution)
+
+# 15:00 UTC = 11:00 ET in summer (EDT), 10:00 ET in winter (EST).
+# Both are inside US regular trading hours, so this works year-round.
+# GitHub may delay cron by ~15 min under load — still inside RTH.
+on:
+  schedule:
+    - cron: '0 15 * * 1-5'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write      # heartbeat commit (keeps the cron from being auto-disabled)
+  issues: write        # post the daily report
+
+concurrency:
+  group: daily-tqqq
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Compute target and execute (if broker keys present)
+        id: run
+        env:
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          ALPACA_PAPER: 'true'          # set to 'false' only when going live
+        run: |
+          set -o pipefail
+          python daily_run.py | tee report.md
+
+      - name: Post the daily report as an issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -s report.md ]; then
+            printf '%s\n' "The daily run failed before producing a report." \
+              "See the workflow log: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" > report.md
+          fi
+          gh issue create \
+            --title "TQQQ daily run — $(date -u +%Y-%m-%d)" \
+            --body-file report.md \
+            --repo "${{ github.repository }}"
+
+      # Keeps the repository "active" so GitHub never auto-disables this cron
+      # (scheduled workflows are disabled after 60 days without repo activity).
+      - name: Heartbeat (keep schedule alive)
+        if: always()
+        run: |
+          date -u +%Y-%m-%dT%H:%M:%SZ > .heartbeat
+          git config user.name  "tqqq-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add .heartbeat
+          git commit -m "chore: heartbeat $(date -u +%F)" || exit 0
+          git push
