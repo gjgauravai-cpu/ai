@@ -1,0 +1,28 @@
+name: Promotion gate (research)
+
+# Research-only: runs promote.py for one candidate and prints the verdict.
+# It cannot trade and does not write cleared.json - clearing a strategy for
+# execution stays a deliberate, owner-approved act.
+on:
+  workflow_dispatch:
+    inputs:
+      strategy:
+        description: Strategy name to gate-test
+        required: true
+        default: vol_target_har_live_dd
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt arch
+      - run: python promote.py "${{ github.event.inputs.strategy }}"

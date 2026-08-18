@@ -73,7 +73,11 @@ class EngineConfig:
     vix_symbol: str = "^VIX"           # forward implied-vol index used for the floor
     # live deployment: low-turnover rebalancing (T+1 cash-account safe)
     live_rebalance_days: int = 5       # only revisit the target weight weekly
-    live_band: float = 0.08            # and only trade when |target - held| exceeds this
+    live_band: float = 0.08          # and only trade when |target - held| exceeds this
+    # drawdown-throttle overlay (research agenda #1) - PRE-COMMITTED, never tuned
+    dd_edges: tuple = (-0.15, -0.30, -0.45)   # tier entry thresholds on base-rule drawdown
+    dd_mults: tuple = (1.0, 0.7, 0.5, 0.0)    # exposure multiplier per tier
+    dd_buffer: float = 0.05                   # hysteresis: recover this far above an edge to step back up
     # backtest
     starting_capital: float = 100.0    # matches the funded agentic account
     rf_for_sharpe: float = 0.045       # flat rf for Sharpe (overridden by series if present)

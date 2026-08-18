@@ -136,6 +136,38 @@ def w_vol_target_ivhar(ctx: dict, cfg: EngineConfig) -> pd.Series:
     return w.fillna(0.0).rename("vol_target_ivhar")
 
 
+
+def _dd_throttle(base_w: pd.Series, letf_ret: pd.Series, edges: tuple,
+                 mults: tuple, buffer_: float) -> pd.Series:
+    """Hysteretic exposure multiplier keyed on the BASE rule's own drawdown.
+
+    CAUSALITY: the equity proxy is SHIFTED ONE DAY before cummax/drawdown, so
+    day t's multiplier uses only information through t-1 (the look-ahead trap
+    the review panel flagged). Tiers step one level per day with a recovery
+    buffer, and the proxy tracks the UN-throttled base rule so the 0.0 tier
+    is never absorbing.
+    """
+    base_ret = (base_w * letf_ret).fillna(0.0)
+    eq = (1.0 + base_ret).cumprod().shift(1)          # info through t-1 only
+    dd = (eq / eq.cummax() - 1.0).fillna(0.0)
+    tier = 0
+    out = np.empty(len(dd))
+    for i, d in enumerate(dd.values):
+        if tier < len(edges) and d <= edges[tier]:
+            tier += 1                                  # deteriorate one step
+        elif tier > 0 and d >= edges[tier - 1] + buffer_:
+            tier -= 1                                  # recover one step
+        out[i] = mults[tier]
+    return pd.Series(out, index=dd.index, name="dd_throttle")
+
+
+def w_vol_target_har_live_dd(ctx: dict, cfg: EngineConfig) -> pd.Series:
+    """Agenda #1: the live low-turnover rule with a hysteretic drawdown throttle."""
+    base = w_vol_target_har_live(ctx, cfg)
+    mult = _dd_throttle(base, ctx["letf_ret"], cfg.dd_edges, cfg.dd_mults, cfg.dd_buffer)
+    return (base * mult).rename("vol_target_har_live_dd")
+
+
 REGISTRY = {
     "buy_hold": w_buy_hold,
     "regime_sma": w_regime_sma,
@@ -151,6 +183,7 @@ REGISTRY = {
     "vol_target_ivhar": w_vol_target_ivhar,
     "vol_target_gjr": w_vol_target_gjr,
     "vol_target_har_live": w_vol_target_har_live,
+    "vol_target_har_live_dd": w_vol_target_har_live_dd,
 }
 
 

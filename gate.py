@@ -21,7 +21,8 @@ MAX_CORR_NEW = 0.50        # a NEW sleeve must actually diversify the live book
 
 
 def evaluate(name: str, net_sharpe: float, pvalue: float, net_cagr: float,
-             maxdd: float, corr_to_live: float | None = None) -> dict:
+             maxdd: float, corr_to_live: float | None = None,
+             additional_checks: dict[str, bool] | None = None) -> dict:
     checks = {
         f"net Sharpe >= {MIN_NET_SHARPE}": net_sharpe >= MIN_NET_SHARPE,
         f"matched-null p < {MAX_PVALUE} (real edge)": pvalue < MAX_PVALUE,
@@ -30,6 +31,8 @@ def evaluate(name: str, net_sharpe: float, pvalue: float, net_cagr: float,
     }
     if corr_to_live is not None:
         checks[f"|corr to live| < {MAX_CORR_NEW} (diversifies)"] = abs(corr_to_live) < MAX_CORR_NEW
+    if additional_checks:
+        checks.update(additional_checks)
     passed = all(checks.values())
     return {
         "strategy": name,
