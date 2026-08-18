@@ -112,6 +112,19 @@ def main() -> int:
 
     out: list[str] = []
     t = compute_target()
+    try:                                    # signal journal - committed by CI daily
+        import csv, datetime as _dt
+        from pathlib import Path as _P
+        _f = _P(__file__).parent / "signal_journal.csv"
+        _new = not _f.exists()
+        with open(_f, "a", newline="") as _fh:
+            _w = csv.writer(_fh)
+            if _new:
+                _w.writerow(["run_date", "data_asof", "target_weight", "har_vol", "last_close"])
+            _w.writerow([_dt.date.today().isoformat(), t["asof"],
+                         f"{t['weight']:.4f}", f"{t['har_vol']:.4f}", f"{t['price']:.2f}"])
+    except Exception as _exc:               # noqa: BLE001
+        out.append(f"- signal-journal write failed: {_exc}")
     out.append(f"**Target weight: {t['weight']:.1%}** of account in {TICKER}")
     out.append("")
     out.append(f"- HAR volatility (annualized): {t['har_vol']:.1%}")
