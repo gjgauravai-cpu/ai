@@ -49,7 +49,11 @@ def load_one(ticker: str, start: str, end: str | None,
         df = df[_COLS]
         # extend the cache forward if the requested window runs past it
         want_start = pd.Timestamp(start)
-        if df.index.min() <= want_start:
+        # a cache is only usable if it also reaches near the requested END -
+        # otherwise a stale local cache silently truncates every backtest
+        fresh = (end is not None or
+                 (pd.Timestamp.today().normalize() - df.index.max()).days <= 5)
+        if df.index.min() <= want_start and fresh:
             return df.loc[start:end]
     df = _fetch_yf(ticker, start, end)
     df.to_csv(path)
