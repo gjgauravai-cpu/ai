@@ -31,3 +31,30 @@ all failed matched-null) | intraday trading (session Sharpe 0.41 vs 0.96 overnig
   checks active again), and the REAL gate was run locally with real data ->
   verdict recorded above. promote.yml added so future gate runs can be
   dispatched in CI, where market data IS reachable.
+
+## Literature review: HFT / microstructure corpus (2026-08-20)
+
+21 papers now in `agentic_trading/quant_library/` (LOB dynamics, Hawkes, market
+impact, optimal execution, deep-LOB, SEC reports). Reviewed against CRITERIA.md
+gate 2 (implementable HERE). **Verdict: the HFT/LOB branch is NOT implementable
+in this account and the board should not spend cycles on it.** Reasons, concrete:
+
+- DeepLOB / queue-reactive / Hawkes-microstructure / optimal market making all
+  require Level-2 order-book data, sub-second execution, and shorting. This
+  account has daily bars, T+1 cash settlement, long-only, fractional shares.
+- Our own intraday test already settled the horizon question empirically:
+  intraday session Sharpe 0.41 vs overnight 0.96, no intraday momentum
+  (hourly autocorr -0.115), and ~1500 trades/yr of cost. See REJECTED list.
+- Market-impact papers (Almgren-Chriss, Toth, Lillo, Donier) matter at size.
+  At this account size the order is a rounding error - impact is ~0, so the
+  optimal-execution machinery has nothing to optimise. Revisit only if capital
+  grows enough that a single order moves the book (not remotely the case).
+
+What the corpus DOES earn its place for: it explains the MECHANISM behind
+findings we already made empirically (why high-turnover strategies die to costs;
+why volatility clusters, which is what HAR already exploits). Education and
+execution intuition, not a new edge.
+
+Gate-testable candidates extracted (queued BELOW existing agenda items 2-6,
+which have higher priors):
+| 8 | Deep-RL daily position sizing (Zhang/Zohren/Roberts 1911.10107) | Their daily-frequency formulation is retail-feasible in principle. HIGH overfit risk (ML on ~6k daily obs); must clear matched-null AND walk-forward, and be compared against vol_target_har_live, not buy&hold. | UNTESTED - LOW PRIOR |
