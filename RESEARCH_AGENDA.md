@@ -74,3 +74,20 @@ p=0.052. The multi-trade variants were NET NEGATIVE on both datasets (cost drag
 15-21% of capital on the 730d window); overnight_daily earned 258% gross but paid
 125% in costs. Cost, not signal, is the killer at retail spreads. Do not re-test
 without Level-2 data + sub-bps execution, which this account will never have.
+
+## YouTube-sourced strategies (2026-09-13) — mined 289 transcripts, REJECTED
+
+Channels @moondevonyt (242 trading videos) + @LewisWJackson (47). Haiku pass
+extracted 822 high-concreteness windows. Census: 98 = stop/TP settings only,
+85 = crypto-perp liquidation/funding cascades (need exchange liquidation feeds,
+perps, shorting: not tradable in an equity cash account), 44 = "LLM invents the
+strategy" meta-content, remainder generic indicator talk. Headline claims
+(2,399%, 977%, 875%, 7,547%) are leveraged crypto perps, self-reported,
+in-sample.
+
+The ONE concrete equity-applicable rule (Lewis: EMA21>50>200 + RSI14>50 +
+MACD hist>0, long-only) implemented as `ema_confluence_live` and gated:
+net Sharpe -0.11, CAGR -3.3%, maxDD -88.7%, p=0.963, 7/8 checks FAIL.
+Worse than buy & hold. Trend-confluence family is now rejected three ways
+(regime_sma, tsmom, ema_confluence). Do not mine retail trading YouTube again
+without a specific, novel, equity-implementable rule in hand first.

@@ -168,6 +168,71 @@ def w_vol_target_har_live_dd(ctx: dict, cfg: EngineConfig) -> pd.Series:
     return (base * mult).rename("vol_target_har_live_dd")
 
 
+def w_vol_target_har_live_vix(ctx: dict, cfg: EngineConfig) -> pd.Series:
+    """Agenda #2: live low-turnover rule x VIX term-structure stress multiplier.
+
+    The gate multiplies the HELD (post-lowturn) weight daily, so it only adds
+    turnover during backwardation stress — 1.0 the rest of the time. Neutral
+    before VIX3M history exists (~2007), so the pre-2007 sample matches the base.
+    """
+    base = w_vol_target_har_live(ctx, cfg)
+    gate = ctx["vix_gate"].reindex(base.index).fillna(1.0)
+    return (base * gate).rename("vol_target_har_live_vix")
+
+
+def w_vol_target_har_live_kelly(ctx: dict, cfg: EngineConfig) -> pd.Series:
+    """Agenda #4: fractional-Kelly CEILING on the daily HAR target, then the
+    same weekly/8%-band low-turnover wrapper as the live rule. Never raises
+    exposure above the vol target — only caps it when slow drift is weak."""
+    daily = w_vol_target_har(ctx, cfg)
+    kelly = ctx["kelly_w"].reindex(daily.index).fillna(cfg.max_weight)
+    capped = pd.concat([daily, kelly], axis=1).min(axis=1)
+    return _apply_lowturn(capped, cfg.live_rebalance_days, cfg.live_band,
+                          "vol_target_har_live_kelly")
+
+
+def w_vol_target_har_live_cvar(ctx: dict, cfg: EngineConfig) -> pd.Series:
+    """Agenda #5: CVaR throttle x daily HAR target, then the low-turnover
+    wrapper. The CVaR budget is derived from target_vol (Gaussian 5% ES), so the
+    throttle only binds when the realized tail is fatter than the target allows."""
+    daily = w_vol_target_har(ctx, cfg)
+    scale = ctx["cvar_scale"].reindex(daily.index).fillna(1.0)
+    return _apply_lowturn(daily * scale, cfg.live_rebalance_days, cfg.live_band,
+                          "vol_target_har_live_cvar")
+
+
+def w_tom(ctx: dict, cfg: EngineConfig) -> pd.Series:
+    """Pure turn-of-month anomaly: fully invested on the TOM window (last
+    trading day through the first three of each month), cash otherwise.
+    ~4/21 days exposed. The matched-null rotation test is the honest judge:
+    it asks whether THESE calendar days beat random days at equal exposure."""
+    flag = ctx["tom"].reindex(ctx["letf_ret"].index).fillna(0.0)
+    return flag.rename("tom")
+
+
+
+def w_ema_confluence_live(ctx: dict, cfg: EngineConfig) -> pd.Series:
+    """YouTube-sourced test (LewisWJackson, weekly swing rule), applied to daily
+    bars long-only: in the market only when EMA21 > EMA50 > EMA200, RSI(14) > 50
+    and MACD(12,26,9) histogram > 0 on the underlying; cash otherwise. All
+    parameters PRE-COMMITTED as stated in the video. Signal is SHIFTED one day
+    (underlying_close is the raw same-day close) then wrapped in the same
+    weekly/8%-band low-turnover rule as the live strategy.
+    """
+    px = ctx["underlying_close"].astype(float)
+    e21, e50, e200 = (px.ewm(span=n, adjust=False).mean() for n in (21, 50, 200))
+    d = px.diff()
+    up = d.clip(lower=0).ewm(alpha=1 / 14, adjust=False).mean()
+    dn = (-d.clip(upper=0)).ewm(alpha=1 / 14, adjust=False).mean()
+    rsi = 100 - 100 / (1 + up / dn.replace(0, np.nan))
+    macd = px.ewm(span=12, adjust=False).mean() - px.ewm(span=26, adjust=False).mean()
+    hist = macd - macd.ewm(span=9, adjust=False).mean()
+    on = ((e21 > e50) & (e50 > e200) & (rsi > 50) & (hist > 0)).astype(float)
+    on = on.shift(1).reindex(ctx["letf_ret"].index).fillna(0.0)      # causal
+    return _apply_lowturn(on, cfg.live_rebalance_days, cfg.live_band,
+                          "ema_confluence_live")
+
+
 REGISTRY = {
     "buy_hold": w_buy_hold,
     "regime_sma": w_regime_sma,
@@ -184,6 +249,11 @@ REGISTRY = {
     "vol_target_gjr": w_vol_target_gjr,
     "vol_target_har_live": w_vol_target_har_live,
     "vol_target_har_live_dd": w_vol_target_har_live_dd,
+    "vol_target_har_live_vix": w_vol_target_har_live_vix,
+    "vol_target_har_live_kelly": w_vol_target_har_live_kelly,
+    "vol_target_har_live_cvar": w_vol_target_har_live_cvar,
+    "tom": w_tom,
+    "ema_confluence_live": w_ema_confluence_live,
 }
 
 
