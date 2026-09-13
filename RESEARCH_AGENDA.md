@@ -58,3 +58,19 @@ execution intuition, not a new edge.
 Gate-testable candidates extracted (queued BELOW existing agenda items 2-6,
 which have higher priors):
 | 8 | Deep-RL daily position sizing (Zhang/Zohren/Roberts 1911.10107) | Their daily-frequency formulation is retail-feasible in principle. HIGH overfit risk (ML on ~6k daily obs); must clear matched-null AND walk-forward, and be compared against vol_target_har_live, not buy&hold. | UNTESTED - LOW PRIOR |
+
+## Intraday / multi-trade-per-day test (2026-09-13) — REJECTED, all 9 variants
+
+`intraday15.py` (in repo). TQQQ 15m/60d and 1h/730d, long-only, causal, 3bps and
+5bps per crossing, matched-null (permute WHICH days trade, 500 draws). Strategies:
+opening-range breakout (Zarattini-Aziz style), first-bar momentum, first-bar
+reversal, VWAP reversion, overnight (daily + alt-day), 3-bar momentum multi
+(<=5 RT/day), mean-reversion multi (<=5 RT/day), vs buy_hold and the live
+daily_vol_target over the SAME windows.
+
+Result: NOTHING beat daily_vol_target with p<0.05 at both cost levels. Best
+challenger first_bar_momentum (1h): net Sharpe 0.56 vs 1.00 for the daily rule,
+p=0.052. The multi-trade variants were NET NEGATIVE on both datasets (cost drag
+15-21% of capital on the 730d window); overnight_daily earned 258% gross but paid
+125% in costs. Cost, not signal, is the killer at retail spreads. Do not re-test
+without Level-2 data + sub-bps execution, which this account will never have.
